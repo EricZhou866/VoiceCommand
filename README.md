@@ -138,5 +138,5 @@ python voice_command.py
 
 ## 技术支持
 
-如遇到问题，请提交 Issue 或发送邮件至：[您的邮箱]
+如遇到问题，请提交 Issue 或发送邮件至：[EricZhou866 # gmail.com]
 
