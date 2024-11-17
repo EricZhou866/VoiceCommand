@@ -5,21 +5,43 @@ import json
 import os
 import time
 import threading
-from subprocess import call
+import platform
 
-def press_key_4():
-    # 使用 osascript 在 Mac 上模拟按键4
-    script = '''
-    tell application "System Events"
-        keystroke "4"
-    end tell
-    '''
-    call(["osascript", "-e", script])
-    # 播放系统提示音
-    os.system("afplay /System/Library/Sounds/Tink.aiff")
+class KeyPresser:
+    def __init__(self):
+        self.system = platform.system()
+        if self.system == "Windows":
+            import keyboard
+            self.keyboard = keyboard
+        elif self.system == "Darwin":  # macOS
+            from subprocess import call
+            self.call = call
+    
+    def press_4(self):
+        if self.system == "Windows":
+            self.keyboard.press_and_release('4')
+            import winsound
+            winsound.Beep(1000, 100)  # 1000Hz, 持续100ms
+        elif self.system == "Darwin":
+            script = '''
+            tell application "System Events"
+                keystroke "4"
+            end tell
+            '''
+            self.call(["osascript", "-e", script])
+            os.system("afplay /System/Library/Sounds/Tink.aiff")
 
 def listen_for_command():
     samplerate = 16000
+    key_presser = KeyPresser()
+    
+    # 检测操作系统
+    system = platform.system()
+    if system not in ["Windows", "Darwin"]:
+        print("错误：不支持的操作系统")
+        return
+        
+    print(f"当前操作系统: {system}")
     
     try:
         model = Model("vosk-model-cn-0.22")
@@ -39,13 +61,17 @@ def listen_for_command():
                 text = result.get("text", "")
                 if text:
                     print(f"识别到: {text}")
-                    if any(keyword in text for keyword in ["广志","广智", "救", "我", "就"]):
+                    if any(keyword in text for keyword in ["广智", "救", "我"]):
                         print("检测到关键词，执行按键4...")
-                        press_key_4()
+                        try:
+                            key_presser.press_4()
+                        except Exception as e:
+                            print(f"按键执行失败: {e}")
 
+    print("\n=== 语音控制程序 ===")
     print("开始监听语音命令...")
     print("当检测到以下任意关键词时将触发按键4: 广智, 救, 我")
-    print("按 Ctrl+C 可以退出程序")
+    print("按 Ctrl+C 可以退出程序\n")
     
     try:
         with sd.InputStream(channels=1,
@@ -59,6 +85,8 @@ def listen_for_command():
         print("\n程序已停止")
     except Exception as e:
         print(f"发生错误: {e}")
+        if "PortAudio" in str(e):
+            print("提示：请确保已连接麦克风设备")
 
 if __name__ == "__main__":
     listen_for_command()
